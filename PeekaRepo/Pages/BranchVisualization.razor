@@ -1,0 +1,166 @@
+﻿@page "/BranchVisualization"
+<h3>BranchVisualization</h3>
+
+@* Select reference branch*@
+@if (mConnector.IsConnected)
+{
+    <label for="ddlReferenceBranch" style="width:150px">Reference branch:</label>
+    <select id="ddlReferenceBranch" class="select-option" 
+            @onchange="ReferenceBranchSelected" style="margin-left:15px">
+        <option value=""></option>
+        @if (Branches != null)
+        {
+            @foreach (var branch in Branches)
+            {
+                <option class="option" value="@branch.Name">
+                    @branch.Name   (last commit: @BranchLastCommits[branch.Name].Commit.Committer.Date)
+                </option>
+            }
+        }
+    </select>
+    <br />
+}
+else
+{
+    <p><b>@NoConnectionInfo</b></p>
+}
+
+@* Checkboxes to filter branches *@
+@if (Branches != null && !string.IsNullOrEmpty(ReferenceBranch))
+{
+    <label  style="width:150px">Branches to analyze:</label>
+    @foreach (var branch in Branches)
+    {
+        if (branch.Name != ReferenceBranch)
+        {
+            <input type="checkbox" value="@branch.Name" @bind="CheckedBranches[branch.Name]" @onclick="(()=>CheckBoxClicked(branch.Name))" style="margin-left:15px" />
+            @branch.Name
+        }
+    }
+}
+
+@* container for charts *@ 
+<p>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg">
+                <div id="commitChart" style="width: 750px;height:600px"></div>
+            </div>
+            <div class="col-lg">
+                <div id="conflictChart" style="width: 750px;height:600px"></div>
+            </div>
+        </div>
+    </div>
+</p>
+
+@* Show summary of reference branch *@
+@if (CompareSummary != null && !string.IsNullOrWhiteSpace(ReferenceBranch) && SelectedDetailsBranch == ReferenceBranch)
+{
+    <p><b>Summary of @ReferenceBranch</b></p>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg">
+                <p>Overall</p>
+                <ul>
+                    <li>
+                        Commits to be merge into: @CompareSummary.Ahead.Sum(s => s.Value.AheadBy)
+                    </li>
+                    <li>
+                        Commits to be merged from: @CompareSummary.Behind.Sum(s => s.Value.AheadBy)
+                    </li>
+                    <li>
+                        Conflicts sum: @CompareSummary.FileConflicts.Sum(s => s.Value.Count)
+                    </li>
+                    <li>
+                        Indirect conflicts count: @CompareSummary.IndirectConflicts.Count
+                    </li>
+                </ul>
+            </div>
+
+            @if (CompareSummary.IndirectConflicts.Count > 0)
+            {
+                <div class="col-lg">
+                    <p>Indirect conflicts (@CompareSummary.IndirectConflicts.Count)</p>
+                    <ul>
+                        @foreach (var file in CompareSummary.IndirectConflicts.Keys)
+                        {
+                            <li>
+                                @file changed in (@CompareSummary.IndirectConflicts[file].Count):
+                                <ul>
+                                    @foreach (var branch in CompareSummary.IndirectConflicts[file])
+                                    {
+                                        <li>@branch</li>
+                                    }
+                                </ul>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            @foreach (var branch in CompareSummary.FileConflicts.Keys)
+            {
+                <div class="col-lg">
+                    <p>conflicts with @branch (@CompareSummary.FileConflicts[branch].Count)</p>
+                    <ul>
+                        @foreach (var file in CompareSummary.FileConflicts[branch])
+                        {
+                            <li>@file</li>
+                        }
+                    </ul>
+                </div>
+            }
+
+            @foreach (var branch in CompareSummary.WrongMergedCommits.Keys)
+            {
+                <div class="col-lg">
+                    <p>wrong merges to @branch (@CompareSummary.WrongMergedCommits[branch].Count)</p>
+                    <ul>
+                        @foreach (var commit in CompareSummary.WrongMergedCommits[branch])
+                        {
+                            <li><a target="_blank" href="@commit.HtmlUrl">@commit.Sha - @commit.Commit.Message</a></li>
+                        }
+                    </ul>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@* Show Details of selected branch *@
+@if (!string.IsNullOrEmpty(SelectedDetailsBranch) && SelectedDetailsBranch != ReferenceBranch)
+{
+    <p><b>Details of @SelectedDetailsBranch</b></p>
+    <p>Base commit (@CompareSummary.Ahead[SelectedDetailsBranch].MergeBaseCommit.Commit.Committer.Date): <a target="_blank" href="@CompareSummary.Ahead[SelectedDetailsBranch].BaseCommit.HtmlUrl">@CompareSummary.Ahead[SelectedDetailsBranch].BaseCommit.Commit.Message</a></p>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-lg">
+                <p>commits ahead (@CompareSummary.Ahead[SelectedDetailsBranch].Commits.Count)</p>
+                <ul>
+                    @foreach (var commit in CompareSummary.Ahead[SelectedDetailsBranch].Commits)
+                    {
+                        <li><a target="_blank" href="@commit.HtmlUrl">@commit.Sha - @commit.Commit.Message</a></li>
+                    }
+                </ul>
+            </div>
+            <div class="col-lg">
+                <p>commits behind (@CompareSummary.Behind[SelectedDetailsBranch].Commits.Count)</p>
+                <ul>
+                    @foreach (var commit in CompareSummary.Behind[SelectedDetailsBranch].Commits)
+                    {
+                        <li><a target="_blank" href="@commit.HtmlUrl">@commit.Sha - @commit.Commit.Message</a></li>
+                    }
+                </ul>
+            </div>
+            <div class="col-lg">
+                <p>file conflicts (@CompareSummary.FileConflicts[SelectedDetailsBranch].Count)</p>
+                <ul>
+                    @foreach (var file in CompareSummary.FileConflicts[SelectedDetailsBranch])
+                    {
+                        <li>@file</li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+}

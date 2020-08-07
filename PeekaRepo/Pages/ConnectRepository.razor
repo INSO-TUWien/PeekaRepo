@@ -1,0 +1,22 @@
+﻿@page "/connectrepository"
+<h3>Connect Repository</h3>
+
+<label for="lblOwner" style="width:100px;">Owner:</label>
+<input id="lblOwner" type="text" @bind="ConnectionData.Owner" />
+<br />
+<label for="lblRepository" style="width:100px;">Repository:</label>
+<input id="lblRepository" type="text" @bind="ConnectionData.Repository" />
+<br />
+<hr />
+<b>Optional:</b> (increases git rest api call limitations - see: <a href="https://developer.github.com/v3/#rate-limiting" target="_blank">Rate limiting</a><br />
+<label for="lblToken" style="width:100px;">Token:</label>
+<input id="lblToken" type="text" @bind="ConnectionData.Token" style="width:400px;"/><br />
+or (warning: deprecated see <a target="_blank" href="https://developer.github.com/changes/2020-02-14-deprecating-password-auth/">Info on github</a>)<br />
+<label for="lblUsername" style="width:100px;">Username:</label>
+<input id="lblUsername" type="text" @bind="ConnectionData.Username" />
+<label for="lblPassword" style="width:100px;">Password:</label>
+<input id="lblPassword" type="text" @bind="ConnectionData.Password" />
+<br />
+<hr />
+<button @onclick="Connect">Connect</button>
+<div style="visibility: @(!string.IsNullOrEmpty(StatusText))">@StatusText</div>
